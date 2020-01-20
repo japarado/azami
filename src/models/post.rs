@@ -1,6 +1,8 @@
 use crate::database::Pool;
+use crate::models::user::User;
 use crate::schema::posts;
 use actix_web::web;
+use diesel::prelude::*;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -9,41 +11,34 @@ use serde::{Deserialize, Serialize};
 pub struct NewPost {
     pub title: String,
     pub body: String,
+    pub user_id: i32,
 }
-#[derive(Serialize, Deserialize, Queryable, Identifiable, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Identifiable, Associations, PartialEq, Debug)]
+#[belongs_to(User)]
 pub struct Post {
     pub id: i32,
     pub title: String,
     pub body: String,
+    pub user_id: i32,
 }
 
 impl Post {
-    pub fn all(pool: web::Data<Pool>) -> Result<Vec<Post>, diesel::result::Error> {
+    pub fn all(pool: web::Data<Pool>, owner_fk: i32) -> Result<Vec<Post>, diesel::result::Error> {
         use crate::schema::posts::dsl::*;
         let conn = &pool.get().unwrap();
-        posts.order(id.asc()).load::<Post>(conn)
-    }
-
-    pub fn show(pool: web::Data<Pool>, pk: i32) -> Result<Post, diesel::result::Error> {
-        use crate::schema::posts::dsl::*;
-        let conn = &pool.get().unwrap();
-        posts.find(pk).first::<Post>(conn)
-    }
-
-    pub fn store(pool: web::Data<Pool>, new_post: NewPost) -> Result<Post, diesel::result::Error> {
-        use crate::schema::posts::dsl::*;
-        let conn = &pool.get().unwrap();
-        diesel::insert_into(posts)
-            .values(new_post)
-            .get_result::<Post>(conn)
+        posts
+            .filter(user_id.eq(owner_fk))
+            .order(id.asc())
+            .load::<Post>(conn)
     }
 }
 
 impl NewPost {
-    pub fn new(title: &str, body: &str) -> Self {
+    pub fn new(title: &str, body: &str, user_id: &i32) -> Self {
         Self {
             title: String::from(title),
             body: String::from(body),
+            user_id: user_id.to_owned(),
         }
     }
 }

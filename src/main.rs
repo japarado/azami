@@ -5,7 +5,6 @@ use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use listenfd::ListenFd;
-use std::time;
 
 mod controllers;
 mod database;

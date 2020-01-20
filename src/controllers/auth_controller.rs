@@ -39,7 +39,7 @@ pub async fn register(pool: web::Data<Pool>, auth_data: web::Form<AuthData>) -> 
 }
 
 #[get("/me")]
-pub async fn me(logged_user: SlimUser, id: Identity) -> HttpResponse {
+pub async fn me(logged_user: SlimUser) -> HttpResponse {
     HttpResponse::Ok().json(logged_user)
 }
 
@@ -47,6 +47,11 @@ pub async fn me(logged_user: SlimUser, id: Identity) -> HttpResponse {
 pub async fn logout(id: Identity) -> impl Responder {
     id.forget();
     HttpResponse::Ok().json("Logged out")
+}
+
+#[get("/alt-me")]
+pub async fn alt_me(id: Identity) -> impl Responder {
+    HttpResponse::Ok().json(id.identity())
 }
 
 mod responders {

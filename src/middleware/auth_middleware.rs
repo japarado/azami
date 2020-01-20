@@ -19,7 +19,7 @@ impl FromRequest for SlimUser {
                 let user: SlimUser = serde_json::from_str(&identity)?;
                 return Ok(user);
             };
-            Err(error::ErrorBadRequest("Unauthorized"))
+            Err(error::ErrorUnauthorized("Unauthorized"))
         })
     }
 }

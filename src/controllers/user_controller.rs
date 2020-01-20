@@ -15,4 +15,3 @@ pub async fn index(
         .map(|users| HttpResponse::Ok().json(responders::Multiple { users }))
         .map_err(|_| HttpResponse::InternalServerError().json("Error retrieving all users"))
 }
-
