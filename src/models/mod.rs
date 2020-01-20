@@ -3,6 +3,7 @@ use actix_web::web;
 use diesel::result::Error;
 
 pub mod user;
+pub mod post;
 
 pub trait Model<T, U> {
     fn all(pool: web::Data<Pool>) -> Result<Vec<T>, Error>;

@@ -87,12 +87,20 @@ pub mod auth {
 
     pub fn verify_user(auth_data: AuthData, pool: web::Data<Pool>) -> Result<SlimUser, AuthError> {
         let user = get_user_by_email(&auth_data.email, pool);
-
         match user {
-            Ok(existing_user) => match utils::verify(&existing_user.hash, &auth_data.password) {
-                Ok(_) => Ok(existing_user.into()),
-                Err(_) => Err(AuthError::InvalidCredentials),
-            },
+            Ok(existing_user) => {
+                let pass_verif_res = utils::verify(&existing_user.hash, &auth_data.password);
+                match pass_verif_res {
+                    Ok(is_verified) => {
+                        if is_verified {
+                            Ok(existing_user.into())
+                        } else {
+                            Err(AuthError::InvalidCredentials)
+                        }
+                    }
+                    Err(_internal_server_error) => Err(AuthError::NotFound),
+                }
+            }
             Err(_) => Err(AuthError::NotFound),
         }
     }

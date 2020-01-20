@@ -1,9 +1,11 @@
 #[macro_use]
 extern crate diesel;
 
+use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use listenfd::ListenFd;
+use std::time;
 
 mod controllers;
 mod database;
@@ -23,6 +25,14 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
+            .wrap(IdentityService::new(
+                CookieIdentityPolicy::new(utils::get_secret_key().as_bytes())
+                    .name("auth")
+                    .path("/")
+                    .domain(utils::get_domain().as_str())
+                    .max_age(86400)
+                    .secure(false),
+            ))
             .data(pool.clone())
             .configure(routes::config)
             .service(index)

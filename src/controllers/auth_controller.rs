@@ -1,7 +1,6 @@
 use crate::database::Pool;
-use crate::errors;
 use crate::models::user;
-use crate::models::user::{AuthData, NewUser, SlimUser, User};
+use crate::models::user::{AuthData, SlimUser, User};
 use actix_identity::Identity;
 use actix_web::{delete, get, post, web, HttpResponse, Responder};
 
@@ -22,7 +21,10 @@ pub async fn login(
         Ok(slim_user) => {
             let user_string = serde_json::to_string(&slim_user).unwrap();
             id.remember(user_string.clone());
-            HttpResponse::Ok().json(slim_user)
+            HttpResponse::Ok().json(responders::UserLoggedIn {
+                user: slim_user,
+                token: user_string,
+            })
         }
         Err(_err) => HttpResponse::Ok().json("Invalid credentials"),
     }
@@ -37,11 +39,23 @@ pub async fn register(pool: web::Data<Pool>, auth_data: web::Form<AuthData>) -> 
 }
 
 #[get("/me")]
-pub async fn me(logged_user: SlimUser) -> HttpResponse {
+pub async fn me(logged_user: SlimUser, id: Identity) -> HttpResponse {
     HttpResponse::Ok().json(logged_user)
 }
 
-// #[get("test")]
-// pub async fn test(pool: web::Data<Pool>, auth_data: web::Form<AuthData>) -> impl Responder {
-//     user::auth::verify_user(person, pool: web::Data<Pool>)
-// }
+#[delete("/logout")]
+pub async fn logout(id: Identity) -> impl Responder {
+    id.forget();
+    HttpResponse::Ok().json("Logged out")
+}
+
+mod responders {
+    use crate::models::user::SlimUser;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize)]
+    pub struct UserLoggedIn {
+        pub user: SlimUser,
+        pub token: String,
+    }
+}
