@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate diesel;
 
+extern crate argonautica;
+
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;

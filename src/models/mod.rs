@@ -12,3 +12,5 @@ pub trait Model<T, U> {
     fn update(pool: web::Data<Pool>, pk: i32, payload: web::Form<U>) -> Result<T, Error>;
     fn delete(pool: web::Data<Pool>, pk: i32) -> Result<T, Error>;
 }
+
+

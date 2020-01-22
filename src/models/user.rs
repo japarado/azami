@@ -4,8 +4,7 @@ use actix_web::web;
 use diesel::prelude::*;
 use diesel::result::Error;
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Queryable, Identifiable, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Identifiable, PartialEq, Debug)]
 pub struct User {
     pub id: i32,
     pub email: String,
@@ -54,6 +53,12 @@ impl User {
         use crate::schema::users::dsl::*;
         let conn = &pool.get().unwrap();
         users.order(id.asc()).load::<User>(conn)
+    }
+
+    pub fn show(pool: web::Data<Pool>, pk: i32) -> Result<Self, Error> {
+        use crate::schema::users::dsl::*;
+        let conn = &pool.get().unwrap();
+        users.find(pk).first::<User>(conn)
     }
 
     pub fn store(pool: web::Data<Pool>, user: web::Form<AuthData>) -> Result<User, Error> {
