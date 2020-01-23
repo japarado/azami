@@ -3,6 +3,7 @@ extern crate diesel;
 
 extern crate argonautica;
 
+use actix_cors::Cors;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
@@ -26,6 +27,7 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
+            .wrap(Cors::new().finish())
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(utils::get_secret_key().as_bytes())
                     .name("auth")

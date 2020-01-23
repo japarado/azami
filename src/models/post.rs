@@ -35,12 +35,40 @@ impl Post {
         posts.order(id.asc()).load::<Post>(conn)
     }
 
+    pub fn all_by_id(
+        pool: web::Data<Pool>,
+        user_fk: &i32,
+    ) -> Result<Vec<Post>, diesel::result::Error> {
+        use crate::schema::posts::dsl::*;
+        use crate::schema::users::dsl::*;
+        let conn = &pool.get().unwrap();
+        let target_user = users.find(user_fk).get_result::<User>(conn)?;
+        Post::belonging_to(&target_user).load(conn)
+    }
+
+    pub fn show(pool: web::Data<Pool>, pk: &i32) -> Result<Post, diesel::result::Error> {
+        use crate::schema::posts::dsl::*;
+        let conn = &pool.get().unwrap();
+        posts.find(pk).first::<Post>(conn)
+    }
+
     pub fn store(pool: web::Data<Pool>, new_post: NewPost) -> Result<Post, diesel::result::Error> {
         use crate::schema::posts::dsl::*;
         let conn = &pool.get().unwrap();
         diesel::insert_into(posts)
             .values(new_post)
             .get_result::<Post>(conn)
+    }
+
+    pub fn destroy(
+        pool: web::Data<Pool>,
+        pk: &i32,
+        user_fk: &i32,
+    ) -> Result<Post, diesel::result::Error> {
+        use crate::schema::posts::dsl::*;
+        let conn = &pool.get().unwrap();
+        let target = posts.find(pk).filter(user_id.eq(user_fk));
+        diesel::delete(target).get_result::<Post>(conn)
     }
 }
 

@@ -14,7 +14,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/posts")
             .service(controllers::post_controller::index)
-            .service(controllers::post_controller::store),
+            .service(controllers::post_controller::store)
+            .service(controllers::post_controller::destroy)
     );
 
     cfg.service(
