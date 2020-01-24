@@ -1,26 +1,20 @@
-use crate::database::Pool;
+use crate::database::StatePool;
 use crate::models::user::User;
 use crate::schema::posts;
-use actix_web::web;
 use diesel::prelude::*;
+use diesel::result::Error;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-pub struct RequestPost {
-    pub title: String,
-    pub body: String,
-}
-
-#[derive(Serialize, Deserialize, Insertable, Debug)]
+#[derive(Serialize, Deserialize, Insertable, PartialEq, Debug)]
 #[table_name = "posts"]
 pub struct NewPost {
     pub title: String,
     pub body: String,
     pub user_id: i32,
 }
-#[derive(Serialize, Deserialize, Queryable, Identifiable, Associations, PartialEq, Debug)]
+
+#[derive(Serialize, Deserialize, Associations, Queryable, Identifiable, PartialEq, Debug)]
 #[belongs_to(User)]
-#[table_name = "posts"]
 pub struct Post {
     pub id: i32,
     pub title: String,
@@ -29,55 +23,32 @@ pub struct Post {
 }
 
 impl Post {
-    pub fn all(pool: web::Data<Pool>) -> Result<Vec<Post>, diesel::result::Error> {
+    pub fn index(pool: StatePool) -> Result<Vec<Self>, Error> {
         use crate::schema::posts::dsl::*;
         let conn = &pool.get().unwrap();
-        posts.order(id.asc()).load::<Post>(conn)
+        posts.order(id.asc()).load::<Self>(conn)
     }
 
-    pub fn all_by_id(
-        pool: web::Data<Pool>,
-        user_fk: &i32,
-    ) -> Result<Vec<Post>, diesel::result::Error> {
+    pub fn store(pool: StatePool, new_post: NewPost) -> Result<Self, Error> {
         use crate::schema::posts::dsl::*;
-        use crate::schema::users::dsl::*;
         let conn = &pool.get().unwrap();
-        let target_user = users.find(user_fk).get_result::<User>(conn)?;
-        Post::belonging_to(&target_user).load(conn)
+        diesel::insert_into(posts).values(new_post).get_result(conn)
     }
 
-    pub fn show(pool: web::Data<Pool>, pk: &i32) -> Result<Post, diesel::result::Error> {
+    pub fn my_posts(pool: StatePool, user_fk: &i32) -> Result<Vec<Self>, Error> {
         use crate::schema::posts::dsl::*;
         let conn = &pool.get().unwrap();
-        posts.find(pk).first::<Post>(conn)
-    }
-
-    pub fn store(pool: web::Data<Pool>, new_post: NewPost) -> Result<Post, diesel::result::Error> {
-        use crate::schema::posts::dsl::*;
-        let conn = &pool.get().unwrap();
-        diesel::insert_into(posts)
-            .values(new_post)
-            .get_result::<Post>(conn)
-    }
-
-    pub fn destroy(
-        pool: web::Data<Pool>,
-        pk: &i32,
-        user_fk: &i32,
-    ) -> Result<Post, diesel::result::Error> {
-        use crate::schema::posts::dsl::*;
-        let conn = &pool.get().unwrap();
-        let target = posts.find(pk).filter(user_id.eq(user_fk));
-        diesel::delete(target).get_result::<Post>(conn)
+        let target_user = User::show(pool, user_fk)?;
+        Post::belonging_to(&target_user).load::<Self>(conn)
     }
 }
 
 impl NewPost {
-    pub fn new(title: &str, body: &str, user_id: &i32) -> Self {
+    pub fn new() -> Self {
         Self {
-            title: title.to_string(),
-            body: body.to_string(),
-            user_id: user_id.to_owned(),
+            title: String::from(""),
+            body: String::from(""),
+            user_id: -1,
         }
     }
 }

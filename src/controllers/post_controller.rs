@@ -1,71 +1,39 @@
-use crate::controllers::IdPath;
-use crate::database::Pool;
-use crate::models::post::{NewPost, Post, RequestPost};
-use crate::models::user::SlimUser;
+use crate::database::StatePool;
+use crate::models::post::{NewPost, Post};
+use crate::models::user::AuthUser;
 use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
+use diesel::result::Error;
+use serde::{Deserialize, Serialize};
 
 #[get("")]
-pub async fn index(pool: web::Data<Pool>, auth_user: SlimUser) -> impl Responder {
-    web::block(move || -> Result<Vec<Post>, diesel::result::Error> {
-        Ok(Post::all_by_id(pool, &auth_user.id)?)
-    })
-    .await
-    .map(|posts| HttpResponse::Ok().json(posts))
-    .map_err(|_| HttpResponse::InternalServerError())
+pub async fn index(pool: StatePool, auth_user: AuthUser) -> impl Responder {
+    web::block(move || -> Result<Vec<Post>, Error> { Ok(Post::my_posts(pool, &auth_user.id)?) })
+        .await
+        .map(|posts| HttpResponse::Ok().json(posts))
+        .map_err(|_| HttpResponse::InternalServerError())
 }
 
 #[post("")]
 pub async fn store(
-    pool: web::Data<Pool>,
+    pool: StatePool,
     form: web::Form<RequestPost>,
-    auth_user: SlimUser,
+    auth_user: AuthUser,
 ) -> impl Responder {
-    web::block(move || -> Result<Post, diesel::result::Error> {
-        Ok(Post::store(
-            pool,
-            NewPost::new(&form.title, &form.body, &auth_user.id),
-        )?)
+    web::block(move || -> Result<Post, Error> {
+        let new_post = NewPost {
+            title: form.title.to_string(),
+            body: form.body.to_string(),
+            user_id: auth_user.id.to_owned(),
+        };
+        Ok(Post::store(pool, new_post)?)
     })
     .await
-    .map(|post| HttpResponse::Ok().json(responders::Single { post }))
+    .map(|post| HttpResponse::Created().json(post))
     .map_err(|_| HttpResponse::InternalServerError())
 }
 
-#[patch("/{id}")]
-pub async fn update(
-    pool: web::Data<Pool>,
-    form: web::Form<RequestPost>,
-    path: web::Form<IdPath>,
-    auth_user: SlimUser,
-) -> impl Responder {
-    HttpResponse::Ok().json("Update Route")
-}
-
-#[delete("/{id}")]
-pub async fn destroy(
-    pool: web::Data<Pool>,
-    path: web::Path<IdPath>,
-    auth_user: SlimUser,
-) -> impl Responder {
-    web::block(move || -> Result<Post, diesel::result::Error> {
-        Ok(Post::destroy(pool, &path.id, &auth_user.id)?)
-    })
-    .await
-    .map(|post| HttpResponse::Ok().json(responders::Single { post }))
-    .map_err(|_| HttpResponse::NotFound().json("Post not found/owned by requesting user"))
-}
-
-mod responders {
-    use crate::models::post::Post;
-    use serde::{Deserialize, Serialize};
-
-    #[derive(Serialize, Deserialize)]
-    pub struct Single {
-        pub post: Post,
-    }
-
-    #[derive(Serialize, Deserialize)]
-    pub struct Multiple {
-        pub posts: Vec<Post>,
-    }
+#[derive(Serialize, Deserialize)]
+struct RequestPost {
+    pub title: String,
+    pub body: String,
 }

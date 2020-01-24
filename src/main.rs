@@ -39,6 +39,7 @@ async fn main() -> std::io::Result<()> {
             .data(pool.clone())
             .configure(routes::config)
             .service(index)
+            .service(admin)
     });
 
     server = if let Some(l) = listenfd.take_tcp_listener(0).unwrap() {
@@ -53,4 +54,9 @@ async fn main() -> std::io::Result<()> {
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json("API Root")
+}
+
+#[get("/admin")]
+async fn admin() -> impl Responder {
+    HttpResponse::Ok().json("Admin Route")
 }

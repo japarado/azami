@@ -1,133 +1,81 @@
-use crate::database::Pool;
+use crate::database::StatePool;
+use crate::errors;
 use crate::schema::users;
-use actix_web::web;
+use crate::utils;
 use diesel::prelude::*;
 use diesel::result::Error;
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize, Queryable, Identifiable, PartialEq, Debug)]
+
+// Primary database model. User for queries
+#[derive(Serialize, Deserialize, Identifiable, Queryable, PartialEq, Debug)]
 pub struct User {
     pub id: i32,
-    pub email: String,
-    pub hash: String,
-}
-
-#[derive(Serialize, Deserialize, Insertable, Debug)]
-#[table_name = "users"]
-pub struct NewUser {
-    pub email: String,
-    pub hash: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SlimUser {
-    pub id: i32,
-    pub email: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AuthData {
     pub email: String,
     pub password: String,
 }
 
-impl From<User> for SlimUser {
-    fn from(user: User) -> Self {
-        Self {
-            id: user.id,
-            email: user.email,
-        }
-    }
+// Stored in session for retrieving the authenticated user
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct AuthUser {
+    pub id: i32,
+    pub email: String,
 }
 
-impl NewUser {
-    pub fn new(email: &str, hash: &str) -> Self {
-        Self {
-            email: email.to_string(),
-            hash: hash.to_string(),
-        }
-    }
+// Name might be misleading. NewUser is also used for logins
+#[derive(Serialize, Deserialize, Insertable, PartialEq, Debug)]
+#[table_name = "users"]
+pub struct NewUser {
+    pub email: String,
+    pub password: String,
 }
 
 impl User {
-    pub fn all(pool: web::Data<Pool>) -> Result<Vec<User>, Error> {
+    pub fn show(pool: StatePool, pk: &i32) -> Result<Self, Error> {
         use crate::schema::users::dsl::*;
         let conn = &pool.get().unwrap();
-        users.order(id.asc()).load::<User>(conn)
+        users.find(pk).first::<Self>(conn)
     }
 
-    pub fn show(pool: web::Data<Pool>, pk: i32) -> Result<Self, Error> {
+    pub fn store(pool: StatePool, new_user: NewUser) -> Result<Self, Error> {
         use crate::schema::users::dsl::*;
         let conn = &pool.get().unwrap();
-        users.find(pk).first::<User>(conn)
-    }
 
-    pub fn store(pool: web::Data<Pool>, user: web::Form<AuthData>) -> Result<User, Error> {
-        use crate::schema::users::dsl::*;
-        let conn = &pool.get().unwrap();
-        let hashed_password = crate::utils::hash_password(&user.password).unwrap();
-        let new_user = NewUser::new(&user.email, &hashed_password);
+        let hashed_password = utils::hash_password(&new_user.password);
         diesel::insert_into(users)
-            .values(new_user)
-            .get_result::<User>(conn)
+            .values(NewUser {
+                email: new_user.email.to_owned(),
+                password: hashed_password.unwrap(),
+            })
+            .get_result::<Self>(conn)
     }
-}
 
-impl AuthData {
-    pub fn new(email: &str, password: &str) -> Self {
-        Self {
-            email: email.to_string(),
-            password: password.to_string(),
-        }
-    }
-}
-
-pub mod auth {
-    use super::{AuthData, SlimUser, User};
-    use crate::database::Pool;
-    use crate::errors::AuthError;
-    use crate::utils;
-    use actix_web::web;
-    use diesel::prelude::*;
-    use diesel::result::Error;
-
-    pub fn verify_user(auth_data: AuthData, pool: web::Data<Pool>) -> Result<SlimUser, AuthError> {
-        let user = get_user_by_email(&auth_data.email, pool);
-        match user {
+    pub async fn verify(
+        pool: StatePool,
+        email: &str,
+        password: &str,
+    ) -> Result<AuthUser, errors::AuthError> {
+        let found_user = Self::get_user_by_email(pool, email).await;
+        match found_user {
             Ok(existing_user) => {
-                let pass_verif_res = utils::verify(&existing_user.hash, &auth_data.password);
-                match pass_verif_res {
-                    Ok(is_verified) => {
-                        if is_verified {
-                            Ok(existing_user.into())
-                        } else {
-                            Err(AuthError::InvalidCredentials)
-                        }
-                    }
-                    Err(_internal_server_error) => Err(AuthError::NotFound),
+                let is_verified = utils::verify(&existing_user.password, password)
+                    .expect("Fatal error verifying password");
+                if is_verified {
+                    let auth_user: AuthUser = AuthUser {
+                        id: existing_user.id,
+                        email: existing_user.email,
+                    };
+                    Ok(auth_user)
+                } else {
+                    Err(errors::AuthError::InvalidCredentials)
                 }
             }
-            Err(_) => Err(AuthError::NotFound),
+            Err(_) => Err(errors::AuthError::NotFound),
         }
     }
 
-    fn get_user_by_email(email_query: &str, pool: web::Data<Pool>) -> Result<User, Error> {
+    async fn get_user_by_email(pool: StatePool, email_query: &str) -> Result<Self, Error> {
         use crate::schema::users::dsl::*;
         let conn = &pool.get().unwrap();
-        users.filter(email.eq(email_query)).first::<User>(conn)
-    }
-}
-
-pub mod responders {
-    use super::User;
-    use serde::{Deserialize, Serialize};
-
-    #[derive(Serialize, Deserialize)]
-    pub struct Single {
-        pub user: User,
-    }
-
-    #[derive(Serialize, Deserialize)]
-    pub struct Multiple {
-        pub users: Vec<User>,
+        users.filter(email.eq(email_query)).first::<Self>(conn)
     }
 }

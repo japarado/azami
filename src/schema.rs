@@ -8,10 +8,17 @@ table! {
 }
 
 table! {
+    tags (id) {
+        id -> Int4,
+        name -> Varchar,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         email -> Varchar,
-        hash -> Varchar,
+        password -> Varchar,
     }
 }
 
@@ -19,5 +26,6 @@ joinable!(posts -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     posts,
+    tags,
     users,
 );
