@@ -47,8 +47,8 @@ pub struct RequestPost {
 }
 
 mod responders {
-    use serde::{Deserialize, Serialize};
     use crate::models::post::Post;
+    use serde::Serialize;
 
     #[derive(Serialize)]
     pub struct Single {

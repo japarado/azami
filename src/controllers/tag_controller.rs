@@ -1,3 +1,4 @@
+use crate::controllers::{IdPath, MessageResponse};
 use crate::database::StatePool;
 use crate::models::tag::{NewTag, Tag};
 use crate::models::user::AuthUser;
@@ -28,7 +29,26 @@ pub async fn store(
     })
     .await
     .map(|tag| HttpResponse::Created().json(responders::Single { tag }))
-    .map_err(|_| HttpResponse::InternalServerError())
+    .map_err(|err| HttpResponse::InternalServerError().json(format!("{:?}", err)))
+}
+
+#[patch("/{id}")]
+pub async fn update(
+    pool: StatePool,
+    form: web::Form<RequestTag>,
+    path: web::Path<IdPath>,
+    auth_user: AuthUser,
+) -> impl Responder {
+    web::block(move || -> Result<Tag, Error> {
+        let new_tag = NewTag {
+            name: form.name.to_owned(),
+            user_id: auth_user.id.to_owned(),
+        };
+        Ok(Tag::update(pool, new_tag, &path.id)?)
+    })
+    .await
+    .map(|tag| HttpResponse::Ok().json(responders::Single { tag }))
+    .map_err(|err| HttpResponse::InternalServerError().json(format!("{:?}", err)))
 }
 
 #[derive(Serialize, Deserialize)]

@@ -5,4 +5,4 @@ CREATE TABLE tags(
 	user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX name_idx ON tags(name)
+CREATE INDEX name_idx ON tags(name);_
