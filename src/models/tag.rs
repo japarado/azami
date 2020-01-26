@@ -46,6 +46,13 @@ impl Tag {
         diesel::update(target).set(new_tag).get_result::<Tag>(conn)
     }
 
+    pub fn destroy(pool: StatePool, pk: &i32) -> Result<Self, Error> {
+        use crate::schema::tags::dsl::*;
+        let conn = &pool.get().unwrap();
+        let target = tags.find(pk);
+        diesel::delete(target).get_result(conn)
+    }
+
     // pub fn my_tags(pool: StatePool) -> Result<Vec<Self>, Error> {
     //     use crate::schema::posts::tags::dsl::*;
     // }

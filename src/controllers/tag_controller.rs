@@ -51,6 +51,18 @@ pub async fn update(
     .map_err(|err| HttpResponse::InternalServerError().json(format!("{:?}", err)))
 }
 
+#[delete("/")]
+pub async fn destroy(
+    pool: StatePool,
+    path: web::Path<IdPath>,
+    auth_user: AuthUser,
+) -> impl Responder {
+    web::block(move || -> Result<Tag, Error> { Ok(Tag::destroy(pool, &path.id)?) })
+        .await
+        .map(|tag| HttpResponse::Ok().json(responders::Single { tag }))
+    .map_err(|err| HttpResponse::InternalServerError().json(format!("{:?}", err)))
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct RequestTag {
     name: String,

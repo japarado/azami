@@ -40,6 +40,7 @@ pub async fn store(
     .map_err(|_| HttpResponse::InternalServerError())
 }
 
+
 #[derive(Serialize, Deserialize)]
 pub struct RequestPost {
     pub title: String,
