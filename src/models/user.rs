@@ -30,6 +30,12 @@ pub struct NewUser {
 }
 
 impl User {
+    pub fn index(pool: StatePool) -> Result<Vec<Self>, Error> {
+        use crate::schema::users::dsl::*;
+        let conn = &pool.get().unwrap();
+        users.order(id.asc()).load(conn)
+    }
+
     pub fn show(pool: StatePool, pk: &i32) -> Result<Self, Error> {
         use crate::schema::users::dsl::*;
         let conn = &pool.get().unwrap();

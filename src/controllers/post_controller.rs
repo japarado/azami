@@ -5,6 +5,14 @@ use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use diesel::result::Error;
 use serde::{Deserialize, Serialize};
 
+#[get("/all")]
+pub async fn all(pool: StatePool) -> impl Responder {
+    web::block(move || -> Result<Vec<Post>, Error> { Ok(Post::index(pool)?) })
+        .await
+        .map(|posts| HttpResponse::Ok().json(responders::Multiple { posts }))
+        .map_err(|_| HttpResponse::InternalServerError())
+}
+
 #[get("")]
 pub async fn index(pool: StatePool, auth_user: AuthUser) -> impl Responder {
     web::block(move || -> Result<Vec<Post>, Error> { Ok(Post::my_posts(pool, &auth_user.id)?) })
@@ -33,7 +41,22 @@ pub async fn store(
 }
 
 #[derive(Serialize, Deserialize)]
-struct RequestPost {
+pub struct RequestPost {
     pub title: String,
     pub body: String,
+}
+
+mod responders {
+    use serde::{Deserialize, Serialize};
+    use crate::models::post::Post;
+
+    #[derive(Serialize)]
+    pub struct Single {
+        pub post: Post,
+    }
+
+    #[derive(Serialize)]
+    pub struct Multiple {
+        pub posts: Vec<Post>,
+    }
 }

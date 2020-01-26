@@ -23,6 +23,7 @@ pub struct Post {
 }
 
 impl Post {
+    // Returns all posts owned by the current auth user
     pub fn index(pool: StatePool) -> Result<Vec<Self>, Error> {
         use crate::schema::posts::dsl::*;
         let conn = &pool.get().unwrap();
@@ -35,8 +36,8 @@ impl Post {
         diesel::insert_into(posts).values(new_post).get_result(conn)
     }
 
+    // Returns all posts owned by the current auth user
     pub fn my_posts(pool: StatePool, user_fk: &i32) -> Result<Vec<Self>, Error> {
-        use crate::schema::posts::dsl::*;
         let conn = &pool.get().unwrap();
         let target_user = User::show(pool, user_fk)?;
         Post::belonging_to(&target_user).load::<Self>(conn)

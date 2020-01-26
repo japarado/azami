@@ -27,7 +27,7 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
-            .wrap(Cors::new().finish())
+            .wrap(Cors::new().max_age(3600).finish())
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(utils::get_secret_key().as_bytes())
                     .name("auth")
@@ -39,7 +39,6 @@ async fn main() -> std::io::Result<()> {
             .data(pool.clone())
             .configure(routes::config)
             .service(index)
-            .service(admin)
     });
 
     server = if let Some(l) = listenfd.take_tcp_listener(0).unwrap() {
@@ -54,9 +53,4 @@ async fn main() -> std::io::Result<()> {
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json("API Root")
-}
-
-#[get("/admin")]
-async fn admin() -> impl Responder {
-    HttpResponse::Ok().json("Admin Route")
 }
