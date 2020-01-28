@@ -1,3 +1,4 @@
+use crate::controllers::IdPath;
 use crate::database::StatePool;
 use crate::models::post::{NewPost, Post};
 use crate::models::user::AuthUser;
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub async fn all(pool: StatePool) -> impl Responder {
     web::block(move || -> Result<Vec<Post>, Error> { Ok(Post::index(pool)?) })
         .await
-        .map(|posts| HttpResponse::Ok().json(responders::Multiple { posts }))
+        .map(|posts| HttpResponse::Ok().json(Multiple { posts }))
         .map_err(|_| HttpResponse::InternalServerError())
 }
 
@@ -40,6 +41,47 @@ pub async fn store(
     .map_err(|_| HttpResponse::InternalServerError())
 }
 
+#[delete("/{id}")]
+pub async fn destroy(
+    pool: StatePool,
+    path: web::Path<IdPath>,
+    auth_user: AuthUser,
+) -> impl Responder {
+    web::block(move || -> Result<Post, Error> { Ok(Post::destroy(pool, &path.id, &auth_user.id)?) })
+        .await
+        .map(|post| HttpResponse::Ok().json(Single { post }))
+        .map_err(|_| {
+            HttpResponse::BadRequest().json("Post not found or not existing to current user");
+        })
+}
+
+#[patch("/{id}")]
+pub async fn update(
+    pool: StatePool,
+    path: web::Path<IdPath>,
+    form: web::Form<NewPost>,
+    auth_user: AuthUser,
+) -> impl Responder {
+    web::block(move || -> Result<Post, Error> {
+        let new_post = NewPost {
+            title: form.title.to_owned(),
+            body: form.body.to_owned(),
+            user_id: path.id.to_owned(),
+        };
+        Ok(Post::update(pool, new_post, &path.id, &auth_user.id)?)
+    })
+    .await
+    .map(|post| HttpResponse::Ok().json(Single { post }))
+    .map_err(|_| HttpResponse::InternalServerError())
+}
+
+#[get("/{id}")]
+pub async fn show(pool: StatePool, path: web::Path<IdPath>, auth_user: AuthUser) -> impl Responder {
+    web::block(move || -> Result<Post, Error> { Ok(Post::show(pool, &path.id)?) })
+        .await
+        .map(|post| HttpResponse::Ok().json(Single { post }))
+        .map_err(|_| HttpResponse::InternalServerError())
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestPost {
@@ -47,17 +89,12 @@ pub struct RequestPost {
     pub body: String,
 }
 
-mod responders {
-    use crate::models::post::Post;
-    use serde::Serialize;
+#[derive(Serialize)]
+pub struct Single {
+    pub post: Post,
+}
 
-    #[derive(Serialize)]
-    pub struct Single {
-        pub post: Post,
-    }
-
-    #[derive(Serialize)]
-    pub struct Multiple {
-        pub posts: Vec<Post>,
-    }
+#[derive(Serialize)]
+pub struct Multiple {
+    pub posts: Vec<Post>,
 }
