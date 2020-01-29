@@ -54,3 +54,4 @@ async fn main() -> std::io::Result<()> {
 async fn index() -> impl Responder {
     HttpResponse::Ok().json("API Root")
 }
+

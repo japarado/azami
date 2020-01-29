@@ -50,12 +50,19 @@ impl Post {
         diesel::delete(target).get_result(conn)
     }
 
-    pub fn update(pool: StatePool, new_post: NewPost, pk: &i32, user_fk: &i32) -> Result<Self, Error> {
+    pub fn update(
+        pool: StatePool,
+        new_post: NewPost,
+        pk: &i32,
+        user_fk: &i32,
+    ) -> Result<Self, Error> {
         use crate::schema::posts::dsl::*;
         let conn = &pool.get().unwrap();
         let target_user = User::show(pool, user_fk)?;
         let target_post = Post::belonging_to(&target_user).filter(id.eq(pk));
-        diesel::update(target_post).set(new_post).get_result::<Self>(conn)
+        diesel::update(target_post)
+            .set(new_post)
+            .get_result::<Self>(conn)
     }
 
     pub fn show(pool: StatePool, pk: &i32) -> Result<Self, Error> {
