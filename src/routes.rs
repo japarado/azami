@@ -22,8 +22,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 
     cfg.service(
         web::scope("/tags")
-            .service(controllers::tag_controller::all)
+            .service(controllers::tag_controller::index)
+            .service(controllers::tag_controller::show)
             .service(controllers::tag_controller::store)
-            // .service(controllers::tag_controller::update)
+            .service(controllers::tag_controller::update)
     );
 }

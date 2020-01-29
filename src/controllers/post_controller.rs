@@ -18,7 +18,7 @@ pub async fn all(pool: StatePool) -> impl Responder {
 pub async fn index(pool: StatePool, auth_user: AuthUser) -> impl Responder {
     web::block(move || -> Result<Vec<Post>, Error> { Ok(Post::my_posts(pool, &auth_user.id)?) })
         .await
-        .map(|posts| HttpResponse::Ok().json(posts))
+        .map(|posts| HttpResponse::Ok().json(Multiple { posts }))
         .map_err(|_| HttpResponse::InternalServerError())
 }
 

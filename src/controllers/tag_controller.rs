@@ -3,13 +3,35 @@ use crate::database::StatePool;
 use crate::models::tag::{NewTag, Tag};
 use crate::models::user::AuthUser;
 use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
-use diesel::result::Error; use serde::{Deserialize, Serialize};
+use diesel::result::Error;
+use serde::{Deserialize, Serialize};
 
 #[get("")]
-pub async fn all(pool: StatePool) -> impl Responder {
+pub async fn index(pool: StatePool) -> impl Responder {
     web::block(move || -> Result<Vec<Tag>, Error> { Ok(Tag::index(pool)?) })
         .await
-        .map(|tags| HttpResponse::Ok().json(responders::Multiple { tags }))
+        .map(|tags| HttpResponse::Ok().json(Multiple { tags }))
+        .map_err(|err| {
+            println!("{:?}", err);
+            HttpResponse::InternalServerError().json(MessageResponse {
+                message: format!("{:?}", err),
+                success: false,
+            })
+        })
+}
+
+#[get("/{id}")]
+pub async fn show(pool: StatePool, path: web::Path<IdPath>) -> impl Responder {
+    web::block(move || -> Result<Tag, Error> { Ok(Tag::show(pool, &path.id)?) })
+        .await
+        .map(|tag| HttpResponse::Ok().json(Single { tag }))
+        .map_err(|err| {
+            println!("{:?}", err);
+            HttpResponse::InternalServerError().json(MessageResponse {
+                message: format!("{:?}", err),
+                success: false,
+            })
+        })
 }
 
 #[post("")]
@@ -21,13 +43,19 @@ pub async fn store(
     web::block(move || -> Result<Tag, Error> {
         let new_tag = NewTag {
             name: form.name.to_owned(),
-            user_id: auth_user.id,
+            user_id: auth_user.id.to_owned(),
         };
         Ok(Tag::store(pool, new_tag)?)
     })
     .await
-    .map(|tag| HttpResponse::Created().json(responders::Single { tag }))
-    .map_err(|err| HttpResponse::InternalServerError().json(format!("{:?}", err)))
+    .map(|tag| HttpResponse::Created().json(Single { tag }))
+    .map_err(|err| {
+        println!("{:?}", err);
+        HttpResponse::InternalServerError().json(MessageResponse {
+            message: format!("{:?}", err),
+            success: false,
+        })
+    })
 }
 
 #[patch("/{id}")]
@@ -45,38 +73,27 @@ pub async fn update(
         Ok(Tag::update(pool, new_tag, &path.id)?)
     })
     .await
-    .map(|tag| HttpResponse::Ok().json(responders::Single { tag }))
-    .map_err(|err| HttpResponse::InternalServerError().json(format!("{:?}", err)))
+    .map(|tag| HttpResponse::Ok().json(Single { tag }))
+    .map_err(|err| {
+        println!("{:?}", err);
+        HttpResponse::InternalServerError().json(MessageResponse {
+            message: format!("{:?}", err),
+            success: false,
+        })
+    })
 }
 
-#[delete("/")]
-pub async fn destroy(
-    pool: StatePool,
-    path: web::Path<IdPath>,
-    auth_user: AuthUser,
-) -> impl Responder {
-    web::block(move || -> Result<Tag, Error> { Ok(Tag::destroy(pool, &path.id)?) })
-        .await
-        .map(|tag| HttpResponse::Ok().json(responders::Single { tag }))
-        .map_err(|err| HttpResponse::InternalServerError().json(format!("{:?}", err)))
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct RequestTag {
     name: String,
 }
 
-mod responders {
-    use crate::models::tag::Tag;
-    use serde::Serialize;
+#[derive(Deserialize, Serialize)]
+pub struct Single {
+    tag: Tag,
+}
 
-    #[derive(Serialize)]
-    pub struct Single {
-        pub tag: Tag,
-    }
-
-    #[derive(Serialize)]
-    pub struct Multiple {
-        pub tags: Vec<Tag>,
-    }
+#[derive(Deserialize, Serialize)]
+pub struct Multiple {
+    tags: Vec<Tag>,
 }

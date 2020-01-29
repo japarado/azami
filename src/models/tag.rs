@@ -4,6 +4,9 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use serde::{Deserialize, Serialize};
 
+use actix_web::{HttpRequest, HttpResponse, Responder};
+use futures::future::{ready, Ready};
+
 #[derive(Serialize, Deserialize, Identifiable, Queryable, AsChangeset, PartialEq, Debug)]
 pub struct Tag {
     pub id: i32,
@@ -57,3 +60,17 @@ impl Tag {
     //     use crate::schema::posts::tags::dsl::*;
     // }
 }
+
+// impl Responder for Tag {
+//     type Error = actix_web::Error;
+//     type Future = Ready<Result<HttpResponse, actix_web::Error>>;
+
+//     fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+//         let body = serde_json::to_string(&self).unwrap();
+
+//         // Create response and set content type
+//         ready(Ok(HttpResponse::Ok()
+//             .content_type("application/json")
+//             .body(body)))
+//     }
+// }
