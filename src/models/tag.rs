@@ -49,10 +49,10 @@ impl Tag {
         diesel::update(target).set(new_tag).get_result::<Tag>(conn)
     }
 
-    pub fn destroy(pool: StatePool, pk: &i32) -> Result<Self, Error> {
+    pub fn destroy(pool: StatePool, pk: &i32, user_fk: &i32) -> Result<Self, Error> {
         use crate::schema::tags::dsl::*;
         let conn = &pool.get().unwrap();
-        let target = tags.find(pk);
+        let target = tags.find(pk).filter(user_id.eq(user_fk));
         diesel::delete(target).get_result(conn)
     }
 

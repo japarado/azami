@@ -26,5 +26,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(controllers::tag_controller::show)
             .service(controllers::tag_controller::store)
             .service(controllers::tag_controller::update)
+            .service(controllers::tag_controller::destroy)
     );
 }

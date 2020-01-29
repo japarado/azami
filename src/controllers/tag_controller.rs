@@ -4,8 +4,7 @@ use crate::models::tag::{NewTag, Tag};
 use crate::models::user::AuthUser;
 use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use diesel::result::Error;
-use serde::{Deserialize, Serialize};
-
+use serde::{Deserialize, Serialize}; 
 #[get("")]
 pub async fn index(pool: StatePool) -> impl Responder {
     web::block(move || -> Result<Vec<Tag>, Error> { Ok(Tag::index(pool)?) })
@@ -81,6 +80,24 @@ pub async fn update(
             success: false,
         })
     })
+}
+
+#[delete("/{id}")]
+pub async fn destroy(
+    pool: StatePool,
+    path: web::Path<IdPath>,
+    auth_user: AuthUser,
+) -> impl Responder {
+    web::block(move || -> Result<Tag, Error> { Ok(Tag::destroy(pool, &path.id, &auth_user.id)?) })
+        .await
+        .map(|tag| HttpResponse::Ok().json(Single { tag }))
+        .map_err(|err| {
+            println!("{:?}", err);
+            HttpResponse::InternalServerError().json(MessageResponse {
+                message: format!("{:?}", err),
+                success: false,
+            })
+        })
 }
 
 #[derive(Deserialize, Serialize)]
