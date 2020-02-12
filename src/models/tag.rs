@@ -1,4 +1,5 @@
 use crate::database::StatePool;
+use crate::models::user::User;
 use crate::schema::tags;
 use diesel::prelude::*;
 use diesel::result::Error;
@@ -7,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use actix_web::{HttpRequest, HttpResponse, Responder};
 use futures::future::{ready, Ready};
 
-#[derive(Serialize, Deserialize, Identifiable, Queryable, AsChangeset, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Identifiable, Queryable, AsChangeset, Associations, PartialEq, Debug)]
+#[belongs_to(User)]
 pub struct Tag {
     pub id: i32,
     pub name: String,
@@ -56,21 +58,24 @@ impl Tag {
         diesel::delete(target).get_result(conn)
     }
 
-    // pub fn my_tags(pool: StatePool) -> Result<Vec<Self>, Error> {
-    //     use crate::schema::posts::tags::dsl::*;
-    // }
-}
-
-impl Responder for Tag {
-    type Error = actix_web::Error;
-    type Future = Ready<Result<HttpResponse, actix_web::Error>>;
-
-    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
-        let body = serde_json::to_string(&self).unwrap();
-
-        // Create response and set content type
-        ready(Ok(HttpResponse::Ok()
-            .content_type("application/json")
-            .body(body)))
+    pub fn my_tags(pool: StatePool, user_fk: &i32) -> Result<Vec<Self>, Error> {
+        use crate::schema::tags::dsl::*;
+        let conn = &pool.get().unwrap();
+        let tag_owner = User::show(pool, user_fk)?;
+        Tag::belonging_to(&tag_owner).get_results(conn)
     }
 }
+
+// impl Responder for Tag {
+//     type Error = actix_web::Error;
+//     type Future = Ready<Result<HttpResponse, actix_web::Error>>;
+
+//     fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+//         let body = serde_json::to_string(&self).unwrap();
+
+//         // Create response and set content type
+//         ready(Ok(HttpResponse::Ok()
+//             .content_type("application/json")
+//             .body(body)))
+//     }
+// }

@@ -1,7 +1,8 @@
 use crate::models::user::AuthUser;
 use actix_identity::Identity;
-use actix_web::{dev::Payload, error, FromRequest, HttpRequest};
+use actix_web::{dev::Payload, error, FromRequest, HttpRequest, HttpResponse};
 use futures::future::Future;
+use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 
 // pub type SlimUser = SlimUser;
@@ -21,5 +22,18 @@ impl FromRequest for AuthUser {
             };
             Err(error::ErrorUnauthorized("Unauthorized"))
         })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct UnauthorizedResponse {
+    message: String,
+}
+
+impl UnauthorizedResponse {
+    pub fn new() -> Self {
+        Self {
+            message: String::from("Unauthorized"),
+        }
     }
 }

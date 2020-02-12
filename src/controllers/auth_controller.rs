@@ -38,11 +38,26 @@ pub async fn login(pool: StatePool, form: web::Form<NewUser>, id: Identity) -> i
 
 #[get("/me")]
 pub async fn me(auth_user: AuthUser) -> impl Responder {
-    HttpResponse::Ok().json(auth_user)
+    HttpResponse::Ok().json(AuthUserResponse { user: auth_user })
 }
 
 #[delete("/logout")]
 pub async fn logout(id: Identity) -> impl Responder {
     id.forget();
     HttpResponse::Ok().json("Logged Out")
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Single {
+    pub user: User,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Multiple {
+    pub users: Vec<User>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AuthUserResponse {
+    pub user: AuthUser,
 }

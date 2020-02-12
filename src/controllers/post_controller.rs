@@ -41,6 +41,25 @@ pub async fn store(
     .map_err(|_| HttpResponse::InternalServerError())
 }
 
+#[post("/demo-store")]
+pub async fn demo_store(pool: StatePool, form: web::Json<NewPost>) -> impl Responder {
+    use crate::schema::posts::dsl::*;
+    use diesel::prelude::*;
+    let conn = &pool.get().unwrap();
+    let new_post: NewPost = NewPost {
+        title: form.title.to_owned(),
+        body: form.body.to_owned(),
+        user_id: form.user_id.to_owned(),
+    };
+    let create_post_res = diesel::insert_into(posts)
+        .values(new_post)
+        .get_result::<Post>(conn);
+    match create_post_res {
+        Ok(created_post) => HttpResponse::Ok().json(Single { post: created_post }),
+        Err(_) => HttpResponse::InternalServerError().json("Error"),
+    }
+}
+
 #[delete("/{id}")]
 pub async fn destroy(
     pool: StatePool,
@@ -53,6 +72,20 @@ pub async fn destroy(
         .map_err(|_| {
             HttpResponse::BadRequest().json("Post not found or not existing to current user");
         })
+}
+
+#[delete("/demo-delete/{id}")]
+pub async fn demo_destroy(pool: StatePool, path: web::Path<IdPath>) -> impl Responder {
+    use crate::schema::posts::dsl::*;
+    use diesel::prelude::*;
+    let target = posts.find(&path.id);
+    let conn = &pool.get().unwrap();
+    let res = diesel::delete(target).get_result::<Post>(conn);
+
+    match res {
+        Ok(deleted_post) => HttpResponse::Ok().json(Single { post: deleted_post }),
+        Err(e) => HttpResponse::InternalServerError().json("Error")
+    }
 }
 
 #[patch("/{id}")]

@@ -7,7 +7,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(controllers::post_controller::index)
             .service(controllers::post_controller::store)
             .service(controllers::post_controller::destroy)
-            .service(controllers::post_controller::show),
+            .service(controllers::post_controller::show)
+            .service(controllers::post_controller::demo_store)
+            .service(controllers::post_controller::demo_destroy)
     );
 
     cfg.service(

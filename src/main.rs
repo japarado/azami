@@ -5,7 +5,7 @@ extern crate argonautica;
 
 use actix_cors::Cors;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
-use actix_web::{get, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, http, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use listenfd::ListenFd;
 
@@ -27,7 +27,14 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
-            .wrap(Cors::new().max_age(3600).finish())
+            .wrap(
+                Cors::new()
+                    // .allowed_origin("http://localhost:3001")
+                    // .allowed_methods(vec!["GET", "PATCH", "POST", "DELETE"])
+                    // .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                    .max_age(3600)
+                    .finish(),
+            )
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(utils::get_secret_key().as_bytes())
                     .name("auth")
@@ -39,6 +46,7 @@ async fn main() -> std::io::Result<()> {
             .data(pool.clone())
             .configure(routes::config)
             .service(index)
+            .service(admin)
     });
 
     server = if let Some(l) = listenfd.take_tcp_listener(0).unwrap() {
@@ -55,3 +63,7 @@ async fn index() -> impl Responder {
     HttpResponse::Ok().json("API Root")
 }
 
+#[get("/admin")]
+async fn admin() -> impl Responder {
+    HttpResponse::Ok().json("Admin Page")
+}

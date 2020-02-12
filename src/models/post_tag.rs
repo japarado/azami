@@ -10,8 +10,7 @@ use serde::{Deserialize, Serialize};
 )]
 #[primary_key(tag_id, post_id)]
 #[table_name = "post_tags"]
-#[belongs_to(Tag)]
-#[belongs_to(Post)]
+#[belongs_to(Tag, Post)]
 pub struct PostTag {
     post_id: i32,
     tag_id: i32,
