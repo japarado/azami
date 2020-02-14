@@ -5,9 +5,10 @@ extern crate argonautica;
 
 use actix_cors::Cors;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
-use actix_web::{get, http, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use listenfd::ListenFd;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 mod controllers;
 mod database;
@@ -24,15 +25,20 @@ async fn main() -> std::io::Result<()> {
 
     let pool = database::create_pool();
 
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file("key.pem", SslFiletype::PEM)
+        .unwrap();
+    builder.set_certificate_chain_file("cert.pem").unwrap();
+
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
             .wrap(
                 Cors::new()
-                    // .allowed_origin("http://localhost:3001")
-                    // .allowed_methods(vec!["GET", "PATCH", "POST", "DELETE"])
-                    // .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                     .max_age(3600)
+                    .supports_credentials()
+                    .disable_vary_header()
                     .finish(),
             )
             .wrap(IdentityService::new(
@@ -55,7 +61,10 @@ async fn main() -> std::io::Result<()> {
         server.bind("127.0.0.1:8000")?
     };
 
-    server.run().await
+
+    server
+        .bind_openssl("localhost:8000", builder)?
+        .run().await
 }
 
 #[get("/")]
