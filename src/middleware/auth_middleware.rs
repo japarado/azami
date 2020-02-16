@@ -29,11 +29,3 @@ impl FromRequest for AuthUser {
 struct UnauthorizedResponse {
     message: String,
 }
-
-impl UnauthorizedResponse {
-    pub fn new() -> Self {
-        Self {
-            message: String::from("Unauthorized"),
-        }
-    }
-}

@@ -29,8 +29,11 @@ pub async fn login(pool: StatePool, form: web::Form<NewUser>, id: Identity) -> i
     match verify_user_res {
         Ok(verified_user) => {
             let user_string = serde_json::to_string(&verified_user).unwrap();
+            println!("{:?}", &verified_user);
             id.remember(user_string);
-            HttpResponse::Ok().json(AuthUserResponse { user: verified_user })
+            HttpResponse::Ok().json(AuthUserResponse {
+                user: verified_user,
+            })
         }
         Err(_err) => HttpResponse::BadRequest().json("Invalid Credentials"),
     }

@@ -4,11 +4,13 @@ extern crate diesel;
 extern crate argonautica;
 
 use actix_cors::Cors;
+use actix_identity::Identity;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{get, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use listenfd::ListenFd;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use std::env;
 
 mod controllers;
 mod database;
@@ -25,26 +27,20 @@ async fn main() -> std::io::Result<()> {
 
     let pool = database::create_pool();
 
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
-        .set_private_key_file("key.pem", SslFiletype::PEM)
-        .unwrap();
-    builder.set_certificate_chain_file("cert.pem").unwrap();
-
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
             .wrap(
                 Cors::new()
-                    .max_age(3600)
+                    .allowed_origin("http://localhost:3500")
                     .supports_credentials()
-                    .disable_vary_header()
+                    .send_wildcard()
+                    .max_age(3600)
                     .finish(),
             )
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(utils::get_secret_key().as_bytes())
-                    .name("auth")
-                    .path("/")
+                    .name("auth-cookie")
                     .domain(utils::get_domain().as_str())
                     .max_age(86400)
                     .secure(false),
@@ -61,10 +57,30 @@ async fn main() -> std::io::Result<()> {
         server.bind("127.0.0.1:8000")?
     };
 
+    let use_https: bool = false;
+    if use_https {
+        let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        builder
+            .set_private_key_file("key.pem", SslFiletype::PEM)
+            .unwrap();
+        builder.set_certificate_chain_file("cert.pem").unwrap();
 
-    server
-        .bind_openssl("localhost:8000", builder)?
-        .run().await
+        server.bind_openssl("localhost:8000", builder)?.run().await
+    } else {
+        server.run().await
+    }
+
+    // if env::var("HTTPS").unwrap_or_else(|_| -> String { String::from("true") }) == "true" {
+    //     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    //     builder
+    //         .set_private_key_file("key.pem", SslFiletype::PEM)
+    //         .unwrap();
+    //     builder.set_certificate_chain_file("cert.pem").unwrap();
+
+    //     server.bind_openssl("localhost:8000", builder)?.run().await
+    // } else {
+    //     server.run().await
+    // }
 }
 
 #[get("/")]
