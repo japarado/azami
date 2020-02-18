@@ -4,13 +4,11 @@ extern crate diesel;
 extern crate argonautica;
 
 use actix_cors::Cors;
-use actix_identity::Identity;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
-use actix_web::{get, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use listenfd::ListenFd;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-use std::env;
 
 mod controllers;
 mod database;
@@ -30,6 +28,7 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
+            // .wrap(middleware::say_hi_middleware::SayHi)
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3500")
