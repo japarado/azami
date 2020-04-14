@@ -30,7 +30,6 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
-            .wrap(middleware::say_hi_middleware::SayHi)
             .wrap(Cors::new().supports_credentials().max_age(3600).finish())
             .wrap(
                 ErrorHandlers::new()
