@@ -5,13 +5,15 @@ extern crate argonautica;
 
 use actix_cors::Cors;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
-use actix_web::{get, App, HttpResponse, HttpServer, Responder};
+use actix_web::middleware::errhandlers::ErrorHandlers;
+use actix_web::{get, http, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use listenfd::ListenFd;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 mod controllers;
 mod database;
+mod error_handlers;
 mod errors;
 mod middleware;
 mod models;
@@ -28,14 +30,11 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(move || {
         App::new()
-            // .wrap(middleware::say_hi_middleware::SayHi)
+            .wrap(middleware::say_hi_middleware::SayHi)
+            .wrap(Cors::new().supports_credentials().max_age(3600).finish())
             .wrap(
-                Cors::new()
-                    .allowed_origin("http://localhost:3500")
-                    .supports_credentials()
-                    .send_wildcard()
-                    .max_age(3600)
-                    .finish(),
+                ErrorHandlers::new()
+                    .handler(http::StatusCode::UNAUTHORIZED, error_handlers::render_401),
             )
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(utils::get_secret_key().as_bytes())

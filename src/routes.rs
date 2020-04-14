@@ -1,5 +1,4 @@
 use crate::controllers;
-use crate::middleware::say_hi_middleware::SayHi;
 use actix_web::web;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
@@ -10,8 +9,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(controllers::post_controller::store)
             .service(controllers::post_controller::destroy)
             .service(controllers::post_controller::show)
-            .service(controllers::post_controller::demo_store)
-            .service(controllers::post_controller::demo_destroy),
+            // .service(controllers::post_controller::demo_store)
+            // .service(controllers::post_controller::demo_destroy),
     );
 
     cfg.service(
